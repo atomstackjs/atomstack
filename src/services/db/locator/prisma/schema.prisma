@@ -1,0 +1,18 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "./client"
+}
+
+model Locator {
+  id          String @id @default(cuid()) @db.VarChar(25)
+  service     String @db.VarChar(64)
+  dataspaceId String @default("c0000000000000000000000") @db.VarChar(25)
+
+  @@index([dataspaceId])
+  @@index([id, dataspaceId])
+}

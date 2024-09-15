@@ -1,0 +1,5 @@
+node_modules/
+.idea/
+.yarn/
+config/env.local
+src/services/db/**/prisma/client/
