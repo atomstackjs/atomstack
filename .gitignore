@@ -3,3 +3,4 @@ node_modules/
 .yarn/
 config/env.local
 src/services/db/**/prisma/client/
+wiki/

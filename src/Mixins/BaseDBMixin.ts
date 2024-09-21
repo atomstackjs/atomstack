@@ -57,12 +57,11 @@ export interface IDBMixinService<TPrismaClient extends PrismaClient, TDbSettings
   decryptDeterministicFields(record: Record<string, unknown>): Promise<Record<string, unknown>>
 }
 
-export interface IDBServiceSchema<
+export type TDBServiceSchema<
   TPrismaClient extends PrismaClient,
   TMixinSettings extends IDbMixinSettings = IDbMixinSettings,
   TService extends IDBMixinService<TPrismaClient, TMixinSettings> = IDBMixinService<TPrismaClient, TMixinSettings>
-> extends ServiceSchema<TMixinSettings, TService> {
-}
+> = ServiceSchema<TMixinSettings, TService>
 
 async function wrapPrismaOrThrow<T>(fn: () => Promise<T>): Promise<T> {
   try {
@@ -80,11 +79,10 @@ export default function <
   TPrismaClient extends PrismaClient = PrismaClient,
   TMixinSettings extends IDbMixinSettings = IDbMixinSettings,
   TService extends IDBMixinService<TPrismaClient, TMixinSettings> = IDBMixinService<TPrismaClient, TMixinSettings>,
->
-  (
-    clientConstructor: new () => TPrismaClient,
-    name: keyof TPrismaClient & string,
-  ): Partial<IDBServiceSchema<TPrismaClient, TMixinSettings, TService>> {
+>(
+  clientConstructor: new () => TPrismaClient,
+  name: keyof TPrismaClient & string,
+): Partial<TDBServiceSchema<TPrismaClient, TMixinSettings, TService>> {
   return {
     name: `db.${name}`,
     hooks: {
