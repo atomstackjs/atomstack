@@ -10,6 +10,7 @@
   "typings": "src/index.ts",
   "scripts": {
     "db:migrate:dev": "./bin/stack.cjs db migrate dev",
+    "db:migrate:test": "./bin/stack.cjs -e test db migrate dev && prisma migrate dev --schema ./src/Mixins/DB/prisma/schema.prisma",
     "test": "jest"
   },
   "bin": {

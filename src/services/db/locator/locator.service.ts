@@ -1,10 +1,7 @@
-import { ServiceSchema } from "moleculer";
-import BaseDBMixin, { IDBServiceSchema } from "../../../Mixins/BaseDBMixin.ts";
+import Base from "../../../Mixins/DB/Base.js";
 import { PrismaClient } from "./prisma/client/index.js";
 
-const DBLocatorService: IDBServiceSchema<PrismaClient> = {
+export default {
   name: "$stack.db.locator",
-  mixins: [BaseDBMixin<PrismaClient>(PrismaClient, "locator") as Partial<ServiceSchema>],
-}
-
-export default DBLocatorService as ServiceSchema;
+  mixins: [Base(PrismaClient, "locator")],
+};

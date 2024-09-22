@@ -10,6 +10,7 @@ const { hideBin } = require("yargs/helpers")
 const { globSync } = require("glob")
 const { ServiceBroker } = require("moleculer")
 const { spawnSync } = require("child_process")
+const fs = require("fs")
 
 register(() => { })
 
@@ -19,6 +20,19 @@ require("../src/boot.ts").default()
 // eslint-disable-next-line @typescript-eslint/no-unused-expressions
 yargs(hideBin(process.argv))
   .scriptName("stack")
+  .option("e", {
+    alias: "env",
+    default: "development"
+  })
+  .middleware((argv) => {
+    if (argv.e) {
+      process.env.NODE_ENV = argv.e
+    }
+
+    process.env.NODE_ENV = process.env.NODE_ENV || "development"
+
+    console.log(`Executing in '${process.env.NODE_ENV}' mode`)
+  })
   .command({
     command: "generate",
     aliases: "g",
@@ -39,6 +53,14 @@ yargs(hideBin(process.argv))
     aliases: "s",
     description: "Start the Atomstack application",
     handler: () => {
+      const configPath = Path.join(process.env.ATOMSTACK_ROOT, "config", "stack.config.ts")
+
+      if (!fs.existsSync(configPath)) {
+        console.error(`Config file not found at ${configPath}`)
+        process.exit(1)
+      }
+
+
       const config = require(Path.join(process.env.ATOMSTACK_ROOT, "config", "stack.config.ts")).default
 
       if (process.env.NODE_ENV === "development") {
@@ -75,12 +97,12 @@ yargs(hideBin(process.argv))
             description: "Run all migrations for all services, including Atomstack internal migrations. " +
               "This will fail if `NODE_ENV` is not set to `development`",
             handler: async () => {
-              if (process.env.NODE_ENV !== "development") {
+              if (!["test", "production"].includes(process.env.NODE_ENV)) {
                 console.error("This command can only be run in development mode")
                 process.exit(1)
               }
 
-              const internalSchema = globSync(Path.join(atomstackDir, "services", "db", "**", "schema.prisma"))
+              const internalSchema = globSync(Path.join(process.env.ATOMSTACK_ROOT, "services", "db", "**", "schema.prisma"))
 
               for (const file of internalSchema) {
                 const result = spawnSync("yarn", ["prisma", "migrate", "dev", "--schema", file], { stdio: "inherit" })

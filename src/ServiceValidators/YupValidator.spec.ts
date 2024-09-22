@@ -1,10 +1,9 @@
 import { beforeEach, it, expect, describe, beforeAll, afterAll } from "@jest/globals";
 import { YupValidator } from "./YupValidator.ts";
-import { BrokerOptions, Errors, ServiceSchema } from "moleculer";
+import { Errors, ServiceSchema } from "moleculer";
 import * as yup from "yup";
 import { ServiceBroker } from "../../../moleculer/moleculer-js/index.js";
-import { TransporterType } from "../../../moleculer/moleculer-js/src/service-broker.js";
-import { Configure } from "../Configure.ts";
+import { SetupSpec } from "../util/SetupSpec.ts";
 
 describe("YupValidator", () => {
   describe("Unit tests", () => {
@@ -64,11 +63,6 @@ describe("YupValidator", () => {
   });
 
   describe("Integration tests", () => {
-    const config: BrokerOptions = {
-      transporter: "fake" as TransporterType,
-      logger: false
-    }
-
     let broker: ServiceBroker;
 
     const FakeServiceSchema: ServiceSchema = {
@@ -87,11 +81,7 @@ describe("YupValidator", () => {
     }
 
     beforeAll(async () => {
-      process.env.NODE_ENV = "test";
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      require("../boot.ts").default()
-      process.env.ATOMSTACK_ROOT = process.env.ATOMSTACK_SRC
-      broker = new ServiceBroker(Configure(config));
+      broker = await SetupSpec()
       await broker.start()
       broker.createService(FakeServiceSchema)
       await broker.waitForServices("fake")
