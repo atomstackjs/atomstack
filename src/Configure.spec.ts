@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { Middleware as ChannelsMiddleware } from "@moleculer/channels";
-import AtomstackMiddleware from "./Middlewares/AtomstackMiddlware.ts"
+import AtomstackMiddleware from "./Middlewares/AtomstackMiddleware.ts"
 import dotenv from "dotenv";
 import dotenvExpand from "dotenv-expand";
 import { defaultsDeep } from "lodash";

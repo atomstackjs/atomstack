@@ -3,7 +3,7 @@ import { defaultsDeep } from "lodash";
 import { BrokerOptions, Errors, LogLevels, TransporterConfig } from "moleculer";
 import { EncryptionMiddleware } from "./Middlewares/EncryptionMiddleware.ts";
 import { OmniValidator } from "./ServiceValidators/OmniValidator.ts";
-import AtomstackMiddlware from "./Middlewares/AtomstackMiddlware.ts";
+import AtomstackMiddleware from "./Middlewares/AtomstackMiddleware.ts";
 
 const DEFAULTS: BrokerOptions = {
   logLevel: process.env.ATOMSTACK_LOG_LEVEL as LogLevels || "debug",
@@ -46,7 +46,7 @@ export function Configure(config: BrokerOptions): BrokerOptions {
         channelHandlerTrigger: null
       }),
       EncryptionMiddleware,
-      AtomstackMiddlware
+      AtomstackMiddleware
     ],
     validator: new OmniValidator()
   }

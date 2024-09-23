@@ -1,0 +1,85 @@
+import { IDBService, {{mixin}} } from "{{atomstackModule}}";
+import { Prisma, PrismaClient } from "./prisma/client/index.js";
+import {{name}}FindUniqueArgs = Prisma.{{name}}FindUniqueArgs;
+import { Context, ServiceSchema } from "moleculer";
+
+export type T{{name}}Service = IDBService<PrismaClient>
+
+const {{name}}ServiceSchema: ServiceSchema<T{{name}}Service> = {
+  name: "{{serviceName}}",
+
+  mixins: [{{mixin}}],
+
+  async started() {
+    this.prisma = new PrismaClient()
+  },
+
+  stopped() {
+    this.prisma.$disconnect()
+  },
+
+  actions: {
+    findUnique: {
+      async handler(ctx: Context<{{name}}FindUniqueArgs>) {
+        return this.prisma.{{camelCaseName}}.findUnique(ctx.params)
+      }
+    },
+    findUniqueOrThrow: {
+      async handler(ctx: Context<{{name}}FindUniqueArgs>) {
+        return this.prisma.{{camelCaseName}}.findUnique(ctx.params)
+      }
+    },
+    findFirst: {
+      async handler(ctx: Context<Prisma.{{name}}FindFirstArgs>) {
+        return this.prisma.{{camelCaseName}}.findFirst(ctx.params)
+      }
+    },
+    findFirstOrThrow: {
+      async handler(ctx: Context<Prisma.{{name}}FindFirstArgs>) {
+        return this.prisma.{{camelCaseName}}.findFirst(ctx.params)
+      }
+    },
+    findMany: {
+      async handler(ctx: Context<Prisma.{{name}}FindManyArgs>) {
+        return this.prisma.{{camelCaseName}}.findMany(ctx.params)
+      }
+    },
+    create: {
+      async handler(ctx: Context<Prisma.{{name}}CreateArgs>) {
+        return this.prisma.{{camelCaseName}}.create(ctx.params)
+      }
+    },
+    createMany: {
+      async handler(ctx: Context<Prisma.{{name}}CreateManyArgs>) {
+        return this.prisma.{{camelCaseName}}.createMany(ctx.params)
+      }
+    },
+    update: {
+      async handler(ctx: Context<Prisma.{{name}}UpdateArgs>) {
+        return this.prisma.{{camelCaseName}}.update(ctx.params)
+      }
+    },
+    updateMany: {
+      async handler(ctx: Context<Prisma.{{name}}UpdateManyArgs>) {
+        return this.prisma.{{camelCaseName}}.updateMany(ctx.params)
+      }
+    },
+    delete: {
+      async handler(ctx: Context<Prisma.{{name}}DeleteArgs>) {
+        return this.prisma.{{camelCaseName}}.delete(ctx.params)
+      }
+    },
+    deleteMany: {
+      async handler(ctx: Context<Prisma.{{name}}DeleteManyArgs>) {
+        return this.prisma.{{camelCaseName}}.deleteMany(ctx.params)
+      }
+    },
+    aggregate: {
+      async handler(ctx: Context<Prisma.{{name}}AggregateArgs>) {
+        return this.prisma.{{camelCaseName}}.aggregate(ctx.params)
+      }
+    }
+  }
+};
+
+export default {{name}}ServiceSchema;

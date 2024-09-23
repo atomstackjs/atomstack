@@ -1,7 +1,6 @@
 import pc from "picocolors"
 import Path from "path"
 import fs from "fs"
-import args from "args"
 import { execSync, spawnSync } from "child_process"
 
 const COLORS = {
@@ -27,14 +26,6 @@ export async function createDirectory(dir: string, cwd: string = process.env.ATO
   say(`Creating directory '${dir}'`)
   if (!fs.existsSync(Path.resolve(cwd, dir))) {
     fs.mkdirSync(Path.resolve(cwd, dir))
-  }
-}
-
-export async function parseArgs(cb: (argParser: typeof args) => typeof args, argv: string[]) {
-  if (argv.length > 0) {
-    return cb(args).parse(argv)
-  } else {
-    return {}
   }
 }
 
@@ -87,4 +78,24 @@ export async function yarnAdd(packageNames: string[], dev: boolean = false) {
 export async function addGitKeep(dir: string) {
   createDirectory(dir)
   fs.writeFileSync(Path.resolve(dir, ".gitkeep"), "")
+}
+
+export async function rmFile(file: string, silent: boolean = false) {
+  if (!silent) {
+    await say(`Removing file '${file}'`)
+  }
+
+  if (fs.existsSync(Path.resolve(process.env.ATOMSTACK_ROOT!, file))) {
+    fs.rmSync(Path.resolve(process.env.ATOMSTACK_ROOT!, file))
+  }
+}
+
+export async function rmDir(dir: string, silent: boolean = false) {
+  if (!silent) {
+    await say(`Removing directory '${dir}'`)
+  }
+
+  if (fs.existsSync(dir)) {
+    fs.rmSync(dir, { recursive: true })
+  }
 }

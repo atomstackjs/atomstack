@@ -4,3 +4,7 @@ node_modules/
 config/env.local
 src/services/db/**/prisma/client/
 wiki/
+src/Mixins/DB/prisma/client/
+src/Mixins/DB/prisma/migrations/
+src/Mixins/DB/prisma/db.sqlite*
+src/Mixins/DB/test-model.service.ts

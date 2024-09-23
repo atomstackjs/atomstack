@@ -1,27 +1,43 @@
 import {ServiceBroker, ServiceSchema} from "moleculer";
-import { beforeEach, describe, jest } from "@jest/globals";
+import {afterAll, beforeAll, beforeEach, describe, expect, it, jest} from "@jest/globals";
 import { SetupSpec } from "../../util/SetupSpec.ts";
-import {Base, IDBService} from "./Base.ts";
-import { Prisma, TestModel, PrismaClient } from "./prisma/client/index.js";
-import TestModelDelegate = Prisma.TestModelDelegate;
+import {Prisma, PrismaClient, TestModel} from "./prisma/client/index.js";
+import TestModelServiceSchema from "./test-model.service.ts";
+import {TTestModelService} from "./test-model.service.js";
 
-jest.mock("@prisma/client");
-jest.mock("../src/utils/encryption");
+describe("DB.Base", () => {
+  describe("Integration tests", () => {
+    let broker: ServiceBroker;
+    let prisma: PrismaClient;
 
-type TTestService = IDBService<TestModelDelegate>;
+    beforeAll(async () => {
+      broker = await SetupSpec();
+      await broker.start()
+      broker.createService<TTestModelService>(TestModelServiceSchema)
+      await broker.waitForServices("$test.db.test-model")
+      prisma = new PrismaClient()
+    });
 
-const TestServiceSchema: ServiceSchema = {
-  name: "$test.db.test",
-  mixins: [Base<TTestService, PrismaClient>(PrismaClient, "testModel")]
-}
+    afterAll(async () => {
+      try {
+        await broker.stop()
+        prisma.$disconnect()
+      } catch (e) {
+        console.error("Failed to stop broker", e)
+      }
+    })
 
-describe("Integration tests", () => {
-  let broker: ServiceBroker;
+    describe("$test.db.test-model.create", () => {
+      it("should create a new record", async () => {
+        const res = await broker.call<TestModel, Prisma.TestModelCreateArgs>(
+          "$test.db.test-model.create",
+          { data: { plainText: "test" } }
+        )
+        expect(res).toEqual(expect.objectContaining({id: expect.stringMatching(/^c/), plainText: "test" }))
+      })
+    })
 
-  beforeEach(async () => {
-    broker = await SetupSpec();
-    broker.start()
   });
-});
+})
 
 
