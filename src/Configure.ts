@@ -1,6 +1,6 @@
 import { Middleware as ChannelsMiddleware } from "@moleculer/channels";
 import { defaultsDeep } from "lodash";
-import {BrokerOptions, Errors, LogLevels, ServiceBroker, TransporterConfig} from "moleculer";
+import { BrokerOptions, Errors, LogLevels, ServiceBroker, TransporterConfig } from "moleculer";
 import { EncryptionMiddleware } from "./Middlewares/EncryptionMiddleware.ts";
 import { OmniValidator } from "./ServiceValidators/OmniValidator.ts";
 import AtomstackMiddleware from "./Middlewares/AtomstackMiddleware.ts";
@@ -53,13 +53,21 @@ export function Configure(config: BrokerOptions): BrokerOptions {
   return options
 }
 
+export async function CreateConfiguration(root: string, options: Partial<BrokerOptions>) {
+  process.env.ATOMSTACK_ROOT = root
+  const config = (await import(`${process.env.ATOMSTACK_ROOT}/config/stack.config.ts`)).default
+
+  return Configure(
+    defaultsDeep(options, config)
+  )
+}
+
+
 export async function CreateBroker(root: string, options: Partial<BrokerOptions>) {
   process.env.ATOMSTACK_ROOT = root
   const config = (await import(`${process.env.ATOMSTACK_ROOT}/config/stack.config.ts`)).default
 
-  return new ServiceBroker(Configure(
-    defaultsDeep(options, config)
-  ))
+  return new ServiceBroker(await CreateConfiguration(root, options))
 }
 
 export async function StartBroker(root: string, options: Partial<BrokerOptions>) {
