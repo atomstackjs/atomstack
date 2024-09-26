@@ -13,7 +13,8 @@ register(() => { })
 
 const { DB } = require("../src/cli/DB.ts")
 const { Generate } = require("../src/cli/Generate.ts")
-const { StartGlobalBroker } = require("../src/Configure.ts");
+const { Start } = require("../src/cli/Start.ts")
+
 
 yargs(hideBin(process.argv))
   .scriptName("stack")
@@ -33,19 +34,7 @@ yargs(hideBin(process.argv))
     console.log(`Executing in '${process.env.NODE_ENV}' mode`)
   })
   .command(Generate)
-  .command({
-    command: "start",
-    aliases: "s",
-    describe: "Start the Atomstack application",
-    async handler(argv) {
-      try {
-        await StartGlobalBroker(argv.root)
-      } catch (error) {
-        console.error(error)
-        process.exit(1)
-      }
-    }
-  })
+  .command(Start)
   .command({
     command: "console",
     aliases: "c",
