@@ -12,6 +12,7 @@ export default function() {
     path: [
       `${process.env.ATOMSTACK_ROOT}/config/env.local`,
       `${process.env.ATOMSTACK_ROOT}/config/env.${process.env.NODE_ENV}`,
-    ]
+    ],
+    debug: process.env.NODE_ENV === "development"
   }))
 }

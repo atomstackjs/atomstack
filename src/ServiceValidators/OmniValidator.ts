@@ -39,7 +39,13 @@ export class OmniValidator extends Validators.Base {
     const schemaClone = cloneDeep(schema);
     delete schemaClone.$$validator;
 
-    return validator.compile(schemaClone);
+    const cb: Validators.Base.CheckerFunction = async (params: unknown) => {
+      return await (validator.compile(schemaClone))(params);
+    }
+
+    cb.async = true
+
+    return cb
   }
 
   validate(params: Record<string, unknown>, schema: IOmniValidatorSchema): boolean {

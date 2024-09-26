@@ -1,5 +1,5 @@
 {
-  "name": "@atomstackjs/atomstack",
+  "name": "@atomstack/core",
   "version": "0.1.0",
   "description": "Atomstack full stack web framework built on MoleculerJS",
   "repository": "git@github.com:atomstackjs/atomstack.git",
@@ -7,7 +7,7 @@
   "author": "fugufish <fugu@hey.com>",
   "license": "MIT",
   "type": "module",
-  "typings": "src/index.ts",
+  "types": "src/globls.d.ts",
   "scripts": {
     "db:migrate:dev": "./bin/stack.cjs db migrate dev --db-service-dir=./src/services/db",
     "db:migrate:test": "yarn db:migrate:dev -e test && ./bin/stack.cjs -e test db migrate dev --db-service-dir=./src/Mixins/DB --atomstack-module=./Base.ts --mixin=Base --service-name-prefix=\"\\$test\"",

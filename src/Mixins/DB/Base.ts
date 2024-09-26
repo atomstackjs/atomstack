@@ -1,6 +1,6 @@
 import {Context, Errors, ServiceSchema} from "moleculer";
 import {array, boolean, number, object, string} from "yup";
-import {YupValidator} from "../../ServiceValidators/index.js";
+import {YupValidator} from "../../ServiceValidators/index.ts";
 import {decrypt, encrypt} from "../../util/encryption.ts";
 import {IService} from "./IService.ts";
 

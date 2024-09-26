@@ -15,9 +15,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@atomstackjs/atomstack@workspace:.":
+"@atomstack/core@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@atomstackjs/atomstack@workspace:."
+  resolution: "@atomstack/core@workspace:."
   dependencies:
     "@eslint/js": "npm:^9.10.0"
     "@jest/globals": "npm:^29.7.0"
@@ -5282,9 +5282,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"moleculer@portal:/home/fugufish/Code/moleculer/moleculer-js::locator=%40atomstackjs%2Fatomstack%40workspace%3A.":
+"moleculer@portal:/home/fugufish/Code/moleculer/moleculer-js::locator=%40atomstack%2Fcore%40workspace%3A.":
   version: 0.0.0-use.local
-  resolution: "moleculer@portal:/home/fugufish/Code/moleculer/moleculer-js::locator=%40atomstackjs%2Fatomstack%40workspace%3A."
+  resolution: "moleculer@portal:/home/fugufish/Code/moleculer/moleculer-js::locator=%40atomstack%2Fcore%40workspace%3A."
   dependencies:
     args: "npm:^5.0.3"
     eventemitter2: "npm:^6.4.9"

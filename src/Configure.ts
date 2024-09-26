@@ -1,6 +1,6 @@
 import { Middleware as ChannelsMiddleware } from "@moleculer/channels";
 import { defaultsDeep } from "lodash";
-import { BrokerOptions, Errors, LogLevels, TransporterConfig } from "moleculer";
+import {BrokerOptions, Errors, LogLevels, ServiceBroker, TransporterConfig} from "moleculer";
 import { EncryptionMiddleware } from "./Middlewares/EncryptionMiddleware.ts";
 import { OmniValidator } from "./ServiceValidators/OmniValidator.ts";
 import AtomstackMiddleware from "./Middlewares/AtomstackMiddleware.ts";
@@ -33,7 +33,6 @@ export function Configure(config: BrokerOptions): BrokerOptions {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require("./boot.ts").default()
 
-
   const options: BrokerOptions = {
     ...defaultsDeep(config, DEFAULTS),
     middlewares: [
@@ -53,3 +52,32 @@ export function Configure(config: BrokerOptions): BrokerOptions {
 
   return options
 }
+
+export async function CreateBroker(root: string, options: Partial<BrokerOptions>) {
+  process.env.ATOMSTACK_ROOT = root
+  const config = (await import(`${process.env.ATOMSTACK_ROOT}/config/stack.config.ts`)).default
+
+  return new ServiceBroker(Configure(
+    defaultsDeep(options, config)
+  ))
+}
+
+export async function StartBroker(root: string, options: Partial<BrokerOptions>) {
+  const broker = await CreateBroker(root, options)
+  await broker.start()
+  return broker
+}
+
+export async function StartGlobalBroker(root: string, options: Partial<BrokerOptions>) {
+  const broker = await CreateGlobalBroker(root, options)
+  await broker.start()
+}
+
+export async function CreateGlobalBroker(root: string, options: Partial<BrokerOptions>) {
+  const broker = await CreateBroker(root, options)
+  // @ts-expect-error - Setting the global broker
+  global.broker = broker
+
+  return broker
+}
+

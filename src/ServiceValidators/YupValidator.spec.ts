@@ -74,8 +74,8 @@ describe("YupValidator", () => {
           params: {
             $$validator: YupValidator,
             name: yup.string().required(),
-            asyncName: yup.string().required().test(async () => {
-              return await broker.call<boolean>("fake2.test")
+            asyncName: yup.string().required().test(async (value: string) => {
+              return await broker.call<boolean, { value: string }>("fake2.test", { value })
             })
           },
           handler(ctx) {
@@ -90,6 +90,10 @@ describe("YupValidator", () => {
       actions: {
         test: {
           handler(ctx) {
+            if (ctx.params.value === "Joe") {
+              return true
+            }
+
             return false
           }
         }
@@ -114,7 +118,7 @@ describe("YupValidator", () => {
 
 
     it("should validate parameters correctly", async () => {
-      let res = await remoteBroker.call("fake.test", { name: "John Doe" })
+      let res = await remoteBroker.call("fake.test", { name: "John Doe", asyncName: "Joe" })
       expect(res).toBe("John Doe")
       await expect(async () => await remoteBroker.call("fake.test", {})).rejects.toThrow(Errors.ValidationError)
     })
