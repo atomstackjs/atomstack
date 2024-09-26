@@ -6,6 +6,7 @@ import { ServiceBroker } from "../../../moleculer/moleculer-js/index.js";
 import { SetupSpec } from "../util/SetupSpec.ts";
 
 describe("YupValidator", () => {
+
   describe("Unit tests", () => {
     let validator: YupValidator;
 
@@ -64,6 +65,7 @@ describe("YupValidator", () => {
 
   describe("Integration tests", () => {
     let broker: ServiceBroker;
+    let remoteBroker: ServiceBroker;
 
     const FakeServiceSchema: ServiceSchema = {
       name: "fake",
@@ -71,7 +73,10 @@ describe("YupValidator", () => {
         test: {
           params: {
             $$validator: YupValidator,
-            name: yup.string().required()
+            name: yup.string().required(),
+            asyncName: yup.string().required().test(async () => {
+              return await broker.call<boolean>("fake2.test")
+            })
           },
           handler(ctx) {
             return ctx.params.name
@@ -80,21 +85,45 @@ describe("YupValidator", () => {
       }
     }
 
+    const FakeServiceSchema2: ServiceSchema = {
+      name: "fake2",
+      actions: {
+        test: {
+          handler(ctx) {
+            return false
+          }
+        }
+      }
+    }
+
     beforeAll(async () => {
-      broker = await SetupSpec()
+      broker = await SetupSpec({ logger: true, logLevel: "debug" })
       await broker.start()
       broker.createService(FakeServiceSchema)
-      await broker.waitForServices("fake")
+      broker.createService(FakeServiceSchema2)
+      remoteBroker = await SetupSpec({ nodeID: "remote", logger: true, logLevel: "debug" })
+      await remoteBroker.start()
+      await remoteBroker.waitForServices("fake")
+      await remoteBroker.waitForServices("fake2")
     })
 
     afterAll(() => {
       broker.stop()
+      remoteBroker.stop()
     });
 
 
     it("should validate parameters correctly", async () => {
-      const res = await broker.call("fake.test", { name: "John Doe" })
+      let res = await remoteBroker.call("fake.test", { name: "John Doe" })
       expect(res).toBe("John Doe")
+      await expect(async () => await remoteBroker.call("fake.test", {})).rejects.toThrow(Errors.ValidationError)
+    })
+
+    it("should correctly handle async validations", async () => {
+      await expect(async () => await remoteBroker.call("fake.test", {
+        name: "present",
+        asyncName: "John Doe"
+      })).rejects.toThrow(Errors.ValidationError)
     })
   })
 })

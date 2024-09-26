@@ -1,15 +1,10 @@
 import { ServiceBroker } from "moleculer"
 export * from "./Configure.ts"
-
-
+export * as Mixins from "./Mixins/index.ts"
+export * as ServiceValidators from "./ServiceValidators/index.ts"
 
 declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace NodeJS {
-    interface Global {
-      broker: ServiceBroker
-    }
-  }
+  const broker: ServiceBroker
 }
 
 declare module "moleculer" {
@@ -17,3 +12,4 @@ declare module "moleculer" {
     sendToChannel: (channelName: string, payload: unknown, opts?: unknown) => Promise<void>
   }
 }
+

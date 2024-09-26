@@ -2,10 +2,10 @@ import { BrokerOptions, ServiceBroker } from "moleculer";
 import { TransporterType } from "../../../moleculer/moleculer-js/src/service-broker.js";
 import { Configure } from "../Configure.ts";
 
-export async function SetupSpec() {
+export async function SetupSpec(options: Partial<BrokerOptions> = {}) {
   const config: BrokerOptions = {
-    transporter: "fake" as TransporterType,
-    logger: false
+    logger: false,
+    ...options
   }
   process.env.NODE_ENV = "test";
   // eslint-disable-next-line @typescript-eslint/no-require-imports

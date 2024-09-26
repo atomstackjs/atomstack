@@ -47,8 +47,13 @@ export default {
       "babel-jest",
       "@jest/globals",
       "@babel/preset-env",
-      "@eslint/js"
+      "@eslint/js",
     ], true)
+    await yarnAdd([
+      "prisma",
+      "yup",
+      "moleculer"
+    ])
     await template("tsconfig.json", "tsconfig.json")
     await template("eslint.config.js", "eslint.config.js")
     await createDirectory("config")

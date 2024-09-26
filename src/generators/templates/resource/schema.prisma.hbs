@@ -1,0 +1,15 @@
+datasource db {
+    provider = "{{provider}}"
+    url      = env("DATABASE_URL")
+}
+
+generator client {
+    provider = "prisma-client-js"
+    output  = "./_client"
+}
+
+model {{modelName}} {
+    id       String  @id @default(cuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}

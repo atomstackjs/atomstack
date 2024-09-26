@@ -1,153 +1,117 @@
-import Moleculer, { Context, Service, ServiceMethods, ServiceSchema, ServiceSettingSchema } from "moleculer";
-import { array, boolean, number, object, string } from "yup";
-import { YupValidator } from "../../ServiceValidators/YupValidator.ts";
-import { decrypt, encrypt } from "../../util/encryption.ts";
-import MoleculerServerError = Moleculer.Errors.MoleculerServerError;
-
-export interface IDBSettings extends ServiceSettingSchema {
-  /**
-   * Fields that should be encrypted using a random encryption algorithm
-   */
-  encryptedFields?: string[];
-  /**
-   * Fields that should be encrypted using a deterministic encryption algorithm
-   */
-  deterministicEncryptedFields?: string[];
-}
-
-export interface IDBService<TPrismaClient = unknown> extends Service<IDBSettings> {
-  prisma: TPrismaClient,
-  cascadeDelete(ctx: Context, id: string): Promise<void>
-  cascadeDeleteMany(ctx: Context, ids: string[]): Promise<void>
-  breakCache(ctx: Context, res: unknown): Promise<unknown>
-  encryptWhere(ctx: Context): Promise<void>
-  encryptData(ctx: Context): Promise<void>
-  encryptNonDeterministicFields(record: Record<string, unknown>): Promise<void>
-  encryptDeterministicFields(record: Record<string, unknown>): Promise<void>
-  decryptFields(ctx: Context, res: unknown): Promise<unknown>
-  decryptNonDeterministicFields(record: Record<string, unknown>): Promise<Record<string, unknown>>
-  decryptDeterministicFields(record: Record<string, unknown>): Promise<Record<string, unknown>>
-}
-
-async function wrapPrismaOrThrow<T>(fn: () => Promise<T>): Promise<T> {
-  try {
-    return await fn();
-  } catch (e) {
-    if ((e as Error).name === "PrismaClientKnownRequestError") {
-      throw new MoleculerServerError((e as Error).message, 404, "NOT_FOUND")
-    }
-    throw e
-  }
-}
+import {Context, Errors, ServiceSchema} from "moleculer";
+import {array, boolean, number, object, string} from "yup";
+import {YupValidator} from "../../ServiceValidators/index.js";
+import {decrypt, encrypt} from "../../util/encryption.ts";
+import {IService} from "./IService.ts";
 
 /**
-* BaseDBMixin
-*
-* This mixin provides a set of common database operations for services using
-* Prisma ORM. It includes hooks for encrypting and decrypting data, as well as
-* methods for handling cascading deletes and cache invalidation.
-*
-* @template TPrismaClient - The type of the Prisma client.
-* @template TMixinSettings - The type of the mixin settings.
-* @template TService - The type of the service.
-*
-* @param {new () => TPrismaClient} clientConstructor - The constructor for the
-* Prisma client.
-* @param {keyof TPrismaClient & string} name - The name of the Prisma model.
-*
-* @returns {Partial<TDBServiceSchema<TPrismaClient, TMixinSettings, TService>>}
-* The service schema.
-*
-* @example
-* import BaseDBMixin from './BaseDBMixin';
-* import { PrismaClient } from '@prisma/client';
-*
-* const LocatorService = {
-*   name: 'locator',
-*   mixins: [BaseDBMixin(PrismaClient, 'locator')],
-*   settings: {
-*     encryptedFields: ['secretField'],
-*     deterministicEncryptedFields: ['uniqueField'],
-*     foreignKeyConstraints: ['relatedModel']
-*   },
-*   actions: {
-*     // Custom actions here
-*   }
-* };
-*
-* module.exports = LocatorService;
-*
-* ## Settings
-* |--------------------------------|------------|---------|------------------------------------------|
-* | `encryptedFields`              | `string[]` | `[]`    | Fields that should be encrypted          |
-* |                                |            |         | before saving to the database.           |
-* | `deterministicEncryptedFields` | `string[]` | `[]`    | Fields to be deterministically encrypted |
-* |                                |            |         | before saving to the database.           |
-* | `foreignKeyConstraints`        | `string[]` | `[]`    | Related models to check for cascading    |
-* |                                |            |         | deletes.                                 |
-*
-* ## Actions
-* | Action            | Description                 | Params                                                   |
-* |-------------------|-----------------------------|----------------------------------------------------------|
-* | findUnique        | Find a unique record        | `where: object`, `select?: object`, `include?: object`,  |
-* |                   |                             | `omit?: object`                                          |
-* | findUniqueOrThrow | Find unique record or throw | `where: object`, `select?: object`, `include?: object`,  |
-* |                   |                             | `omit?: object`                                          |
-* | findFirst         | Find the first record       | `where: object`, `select?: object`, `include?: object`,  |
-* |                   |                             | `omit?: object`                                          |
-* | findFirstOrThrow  | Find first or throw error   | `where: object`, `select?: object`, `include?: object`,  |
-* |                   |                             | `omit?: object`                                          |
-* | findMany          | Find multiple records       | `where: object`, `select?: object`, `include?: object`,  |
-* |                   |                             | `omit?: object`, `orderby?: object`, `skip?: number`,    |
-* |                   |                             | `take?: number`, `cursor?: string`                       |
-* | create            | Create a new record         | `data: object`, `select?: object`, `include?: object`,   |
-* |                   |                             | `omit?: object`                                          |
-* | createMany        | Create multiple records     | `data: object[]`, `skipDuplicates?: boolean`             |
-* | update            | Update a record             | `where: object`, `data: object`, `select?: object`,      |
-* |                   |                             | `include?: object`, `omit?: object`                      |
-* | updateMany        | Update multiple records     | `where: object`, `data: object`                          |
-* | delete            | Delete a record             | `where: object`, `select?: object`, `include?: object`,  |
-* |                   |                             | `omit?: object`                                          |
-* | deleteMany        | Delete multiple records     | `where: object`                                          |
-* | aggregate         | Aggregate records           | `where?: object`, `select?: object`, `include?: object`, |
-* |                   |                             | `omit?: object`, `orderBy?: object`, `skip?: number`,    |
-* |                   |                             | `take?: number`, `cursor?: string`                       |
-* | groupBy           | Group records               | `by: object`, `where?: object`, `select?: object`,       |
-* |                   |                             | `include?: object`, `omit?: object`, `orderBy?: object`, |
-* |                   |                             | `skip?: number`, `take?: number`, `cursor?: string`      |
-*
-* ## Channel Events
-* | Event Name               | Description                              | Params                                                 |
-* |--------------------------|------------------------------------------|--------------------------------------------------------|
-* | `db.<model>.deleted`     | Triggered when a record is deleted.      | `records: Array<{ id: string, [key: string]: any }> }` |
-* | `db.<model>.created`     | Triggered when a record is created.      | `record: { id: string, [key: string]: any } }`         |
-* | `db.<model>.updated`     | Triggered when a record is updated.      | `record: { id: string, [key: string]: any } }`         |
-* | `db.<model>.cache.break` | Triggered when the cache is invalidated. |                                                        |
-   * 
-   * ## Encryption
-   *
-   * Encryption protects sensitive data by converting it into a format that is
-   * unreadable without the correct decryption key. This mixin supports two types
-   * of encryption:
-   *
-   * 1. **Standard Encryption**: Produces different ciphertexts each time, suitable
-   *    for fields like passwords.
-   *
-   * 2. **Deterministic Encryption**: Always produces the same ciphertext for the
-   *    same plaintext, useful for fields that need to be queried or indexed, like
-   *    email addresses. However, it is less secure than standard encryption.
-   *
-   * ### When to Use Deterministic Encryption
-   *
-   * Use deterministic encryption when you need to:
-   * - Perform equality searches on encrypted fields.
-   * - Index encrypted fields for faster query performance.
-   * - Maintain referential integrity between encrypted fields in different tables.
-   *
-   * **Note**: Avoid deterministic encryption for highly sensitive data that does
-   * not need querying, as it offers lower security than standard encryption.
-   */
-export const Base: Partial<ServiceSchema<IDBService>>  = {
+ * BaseDBMixin
+ *
+ * This mixin provides a set of common database operations for services using
+ * Prisma ORM. It includes hooks for encrypting and decrypting data, as well as
+ * methods for handling cascading deletes and cache invalidation.
+ *
+ * @template TPrismaClient - The type of the Prisma client.
+ * @template TMixinSettings - The type of the mixin settings.
+ * @template TService - The type of the service.
+ *
+ * @param {new () => TPrismaClient} clientConstructor - The constructor for the
+ * Prisma client.
+ * @param {keyof TPrismaClient & string} name - The name of the Prisma model.
+ *
+ * @returns {Partial<TDBServiceSchema<TPrismaClient, TMixinSettings, TService>>}
+ * The service schema.
+ *
+ * @example
+ * import BaseDBMixin from './BaseDBMixin';
+ * import { PrismaClient } from '@prisma/client';
+ *
+ * const LocatorService = {
+ *   name: 'locator',
+ *   mixins: [BaseDBMixin(PrismaClient, 'locator')],
+ *   settings: {
+ *     encryptedFields: ['secretField'],
+ *     deterministicEncryptedFields: ['uniqueField'],
+ *     foreignKeyConstraints: ['relatedModel']
+ *   },
+ *   actions: {
+ *     // Custom actions here
+ *   }
+ * };
+ *
+ * module.exports = LocatorService;
+ *
+ * ## Settings
+ * |--------------------------------|------------|---------|------------------------------------------|
+ * | `encryptedFields`              | `string[]` | `[]`    | Fields that should be encrypted          |
+ * |                                |            |         | before saving to the database.           |
+ * | `deterministicEncryptedFields` | `string[]` | `[]`    | Fields to be deterministically encrypted |
+ * |                                |            |         | before saving to the database.           |
+ * | `foreignKeyConstraints`        | `string[]` | `[]`    | Related models to check for cascading    |
+ * |                                |            |         | deletes.                                 |
+ *
+ * ## Actions
+ * | Action            | Description                 | Params                                                   |
+ * |-------------------|-----------------------------|----------------------------------------------------------|
+ * | findUnique        | Find a unique record        | `where: object`, `select?: object`, `include?: object`,  |
+ * |                   |                             | `omit?: object`                                          |
+ * | findUniqueOrThrow | Find unique record or throw | `where: object`, `select?: object`, `include?: object`,  |
+ * |                   |                             | `omit?: object`                                          |
+ * | findFirst         | Find the first record       | `where: object`, `select?: object`, `include?: object`,  |
+ * |                   |                             | `omit?: object`                                          |
+ * | findFirstOrThrow  | Find first or throw error   | `where: object`, `select?: object`, `include?: object`,  |
+ * |                   |                             | `omit?: object`                                          |
+ * | findMany          | Find multiple records       | `where: object`, `select?: object`, `include?: object`,  |
+ * |                   |                             | `omit?: object`, `orderby?: object`, `skip?: number`,    |
+ * |                   |                             | `take?: number`, `cursor?: string`                       |
+ * | create            | Create a new record         | `data: object`, `select?: object`, `include?: object`,   |
+ * |                   |                             | `omit?: object`                                          |
+ * | createMany        | Create multiple records     | `data: object[]`, `skipDuplicates?: boolean`             |
+ * | update            | Update a record             | `where: object`, `data: object`, `select?: object`,      |
+ * |                   |                             | `include?: object`, `omit?: object`                      |
+ * | updateMany        | Update multiple records     | `where: object`, `data: object`                          |
+ * | delete            | Delete a record             | `where: object`, `select?: object`, `include?: object`,  |
+ * |                   |                             | `omit?: object`                                          |
+ * | deleteMany        | Delete multiple records     | `where: object`                                          |
+ * | aggregate         | Aggregate records           | `where?: object`, `select?: object`, `include?: object`, |
+ * |                   |                             | `omit?: object`, `orderBy?: object`, `skip?: number`,    |
+ * |                   |                             | `take?: number`, `cursor?: string`                       |
+ * | groupBy           | Group records               | `by: object`, `where?: object`, `select?: object`,       |
+ * |                   |                             | `include?: object`, `omit?: object`, `orderBy?: object`, |
+ * |                   |                             | `skip?: number`, `take?: number`, `cursor?: string`      |
+ *
+ * ## Channel Events
+ * | Event Name               | Description                              | Params                                                 |
+ * |--------------------------|------------------------------------------|--------------------------------------------------------|
+ * | `db.<model>.deleted`     | Triggered when a record is deleted.      | `records: Array<{ id: string, [key: string]: any }> }` |
+ * | `db.<model>.created`     | Triggered when a record is created.      | `record: { id: string, [key: string]: any } }`         |
+ * | `db.<model>.updated`     | Triggered when a record is updated.      | `record: { id: string, [key: string]: any } }`         |
+ * | `db.<model>.cache.break` | Triggered when the cache is invalidated. |                                                        |
+ *
+ * ## Encryption
+ *
+ * Encryption protects sensitive data by converting it into a format that is
+ * unreadable without the correct decryption key. This mixin supports two types
+ * of encryption:
+ *
+ * 1. **Standard Encryption**: Produces different ciphertexts each time, suitable
+ *    for fields like passwords.
+ *
+ * 2. **Deterministic Encryption**: Always produces the same ciphertext for the
+ *    same plaintext, useful for fields that need to be queried or indexed, like
+ *    email addresses. However, it is less secure than standard encryption.
+ *
+ * ### When to Use Deterministic Encryption
+ *
+ * Use deterministic encryption when you need to:
+ * - Perform equality searches on encrypted fields.
+ * - Index encrypted fields for faster query performance.
+ * - Maintain referential integrity between encrypted fields in different tables.
+ *
+ * **Note**: Avoid deterministic encryption for highly sensitive data that does
+ * not need querying, as it offers lower security than standard encryption.
+ */
+export const Base: Partial<ServiceSchema<IService>> = {
   hooks: {
     before: {
       "create": ["encryptData"],
@@ -158,11 +122,26 @@ export const Base: Partial<ServiceSchema<IDBService>>  = {
       "delete": ["encryptWhere"],
       "deleteMany": ["encryptWhere"]
     },
-    after: {
+    error: {
+      "*": ["handleError"]
     }
   },
 
   actions: {
+    /**
+     * @see https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#count
+     */
+    count: {
+      params: {
+        $$validator: YupValidator,
+        where: object().optional(),
+      },
+      async handler() {
+        throw new Error("Not implemented")
+      }
+    },
+
+
     /**
      * @see https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#findunique
      */
@@ -364,7 +343,7 @@ export const Base: Partial<ServiceSchema<IDBService>>  = {
 
       return res
     },
-    async encryptWhere(ctx: Context<{where: Record<string, string>}>) {
+    async encryptWhere(ctx: Context<{ where: Record<string, string> }>) {
       const where = ctx.params.where
       await this.encryptNonDeterministicFields(where)
       await this.encryptDeterministicFields(where)
@@ -431,5 +410,12 @@ export const Base: Partial<ServiceSchema<IDBService>>  = {
 
       return record
     },
+    async handleError(_ctx: Context, err: Error) {
+      if (err instanceof Errors.MoleculerError) {
+        throw err
+      }
+
+      throw new Errors.MoleculerError(err.message, 500, "INTERNAL_SERVER_ERROR", {error: err})
+    }
   }
 }

@@ -25,7 +25,7 @@ export async function fail(message: string) {
 export async function createDirectory(dir: string, cwd: string = process.env.ATOMSTACK_ROOT!) {
   say(`Creating directory '${dir}'`)
   if (!fs.existsSync(Path.resolve(cwd, dir))) {
-    fs.mkdirSync(Path.resolve(cwd, dir))
+    fs.mkdirSync(Path.resolve(cwd, dir), { recursive: true })
   }
 }
 
@@ -44,7 +44,7 @@ export async function chDir(dir: string, base: string = process.env.ATOMSTACK_RO
 }
 
 export async function template(name: string, destination: string, data: Record<string, string> = {}) {
-  say(`Copying template '${name}' to '${destination}'`)
+  await say(`Copying template '${name}' to '${destination}'`)
   const templatePath = Path.resolve(getTemplateDir(), `${name}.hbs`)
 
   if (!fs.existsSync(templatePath)) {
@@ -73,6 +73,10 @@ export async function executeCommand(command: string) {
 export async function yarnAdd(packageNames: string[], dev: boolean = false) {
   const cmd = dev ? "yarn add -D" : "yarn add"
   await executeCommand(`${cmd} ${packageNames.join(" ")}`)
+}
+
+export async function yarnRun(script: string) {
+  await executeCommand(`yarn run ${script}`)
 }
 
 export async function addGitKeep(dir: string) {

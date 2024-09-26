@@ -9,7 +9,7 @@ export class YupValidator extends Validators.Base {
     this.validator = object(schema);
 
     const checkerFunction: Validators.Base.CheckerFunction = async (params: Record<string, unknown>) => {
-      await this.validator!.validate(params)
+      await this.validator!.validate(params, { abortEarly: true });
 
       return true
     }
@@ -22,7 +22,7 @@ export class YupValidator extends Validators.Base {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   validate(params: Record<string, unknown>, _schema: ObjectShape): boolean {
     try {
-      this.validator?.validateSync(params);
+      this.validator?.validateSync(params, { abortEarly: true });
 
       return true
     } catch (error) {

@@ -1,14 +1,14 @@
-import { IDBService, {{mixin}} } from "{{atomstackModule}}";
-import { Prisma, PrismaClient } from "./prisma/client/index.js";
+import { Mixins } from "{{atomstackModule}}";
+import { Prisma, PrismaClient } from "./prisma/_client_/index.js";
 import {{name}}FindUniqueArgs = Prisma.{{name}}FindUniqueArgs;
 import { Context, ServiceSchema } from "moleculer";
 
-export type T{{name}}Service = IDBService<PrismaClient>
+export type T{{name}}Service = Mixins.DB.IService<PrismaClient>
 
 const {{name}}ServiceSchema: ServiceSchema<T{{name}}Service> = {
   name: "{{serviceName}}",
 
-  mixins: [{{mixin}}],
+  mixins: [Mixins.DB.Base],
 
   async started() {
     this.prisma = new PrismaClient()

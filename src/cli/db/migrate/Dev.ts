@@ -11,14 +11,12 @@ interface Options {
   "db-service-dir": string;
   "service-name-prefix"?: string;
   "atomstack-module"?: string;
-  "mixin": string;
 }
 
 interface MigrateArgs{
   dbServiceDir: string;
   serviceNamePrefix?: string;
   atomstackModule?: string;
-  mixin: string;
 }
 
 export const Dev: CommandModule<Options, MigrateArgs> = {
@@ -29,7 +27,7 @@ export const Dev: CommandModule<Options, MigrateArgs> = {
     return yargs
       .option("db-service-dir", {
         description: "The directory where the db services are located",
-        default: Path.join(process.env.ATOMSTACK_ROOT!, "services", "db")
+        default: Path.join(process.env.ATOMSTACK_ROOT!, "services", "db", "**")
       })
       .option("service-name-prefix", {
         description: "The prefix to use for the service name",
@@ -37,10 +35,6 @@ export const Dev: CommandModule<Options, MigrateArgs> = {
       .options("atomstack-module", {
         description: "The directory where the Atomstack library is located",
         default: "@atomstack/core"
-      })
-      .option("mixin", {
-        description: "The mixin to use for the service",
-        default: "DB"
       }) as unknown as Argv<MigrateArgs>;
   },
   handler: async (args: MigrateArgs) => {
@@ -51,9 +45,12 @@ export const Dev: CommandModule<Options, MigrateArgs> = {
 
     await say(`Running migrations for all services in ${args.dbServiceDir}`);
 
-    const internalSchema = globSync(Path.join(args.dbServiceDir!, "**(!client)**", "schema.prisma"));
+    const internalSchema = globSync(Path.join(args.dbServiceDir!, "**", "schema.prisma"));
 
     for (const file of internalSchema) {
+      if (file.includes("/_client_/")) {
+        continue;
+      }
       await say(`Running migrations for ${file}`);
 
       const result = spawnSync("yarn", ["prisma", "migrate", "dev", "--schema", file], {stdio: "inherit"});
@@ -65,10 +62,9 @@ export const Dev: CommandModule<Options, MigrateArgs> = {
 
       const content = fs.readFileSync(file, "utf-8");
       const models = content.match(/model (\w+) {/g)?.map((m) => m.replace("model ", "").replace(" {", "")) || [];
-
       await setTemplateDir(Path.resolve(process.env.ATOMSTACK_SRC!, "generators/templates/db_service"));
-      for (const model of models) {
 
+      for (const model of models) {
 
         const serviceNameParts = ["db", kebabCase(model)];
         if (args.serviceNamePrefix) {
@@ -80,15 +76,17 @@ export const Dev: CommandModule<Options, MigrateArgs> = {
         const kebabCaseName = kebabCase(model);
         const camelCaseName = camelCase(model);
 
-        await template("db-service.ts", Path.resolve(file, "../../", `${kebabCaseName}.service.ts`), {
-          serviceName,
-          snakeCaseName,
-          kebabCaseName,
-          camelCaseName,
-          atomstackModule: args.atomstackModule!,
-          mixin: args.mixin,
-          name: model
-        });
+        if (!fs.existsSync(Path.resolve(file, "../../", `${kebabCaseName}.service.ts`))) {
+          await say(`Generating service for ${model}`);
+          await template("db-service.ts", Path.resolve(file, "../../", `${kebabCaseName}.service.ts`), {
+            serviceName,
+            snakeCaseName,
+            kebabCaseName,
+            camelCaseName,
+            atomstackModule: args.atomstackModule!,
+            name: model
+          });
+        }
       }
     }
   }
