@@ -17,7 +17,7 @@ const TestModelServiceSchema: ServiceSchema<TTestModelService> = {
   mixins: [Base],
 
   async started() {
-    this.prisma = new PrismaClient()
+    this.prisma = this.createPrismaClient(PrismaClient)
   },
 
   stopped() {

@@ -1,4 +1,4 @@
-import {ServiceSettingSchema} from "moleculer";
+import { ServiceSettingSchema } from "moleculer";
 
 export interface ISettings extends ServiceSettingSchema {
   /**

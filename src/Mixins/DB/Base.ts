@@ -1,8 +1,9 @@
 import { Context, Errors, ServiceSchema } from "moleculer";
 import { array, boolean, number, object, string } from "yup";
 import { YupValidator } from "../../ServiceValidators/index.ts";
-import { decrypt, encrypt } from "../../util/encryption.ts";
 import { IService } from "./IService.ts";
+import { PrismaClient } from "@prisma/client";
+import { decrypt, encrypt } from "../../util/encryption.ts";
 
 /**
  * BaseDBMixin
@@ -42,14 +43,7 @@ import { IService } from "./IService.ts";
  * module.exports = LocatorService;
  *
  * ## Settings
- * |--------------------------------|------------|---------|------------------------------------------|
- * | `encryptedFields`              | `string[]` | `[]`    | Fields that should be encrypted          |
- * |                                |            |         | before saving to the database.           |
- * | `deterministicEncryptedFields` | `string[]` | `[]`    | Fields to be deterministically encrypted |
- * |                                |            |         | before saving to the database.           |
- * | `foreignKeyConstraints`        | `string[]` | `[]`    | Related models to check for cascading    |
- * |                                |            |         | deletes.                                 |
- *
+  *
  * ## Actions
  * | Action            | Description                 | Params                                                   |
  * |-------------------|-----------------------------|----------------------------------------------------------|
@@ -113,14 +107,6 @@ import { IService } from "./IService.ts";
  */
 export const Base: Partial<ServiceSchema<IService>> = {
   hooks: {
-    before: {
-      "create": ["encryptData"],
-      "update": ["encryptData", "encryptWhere"],
-      "find*": ["encryptWhere"],
-      "count": ["encryptWhere"],
-      "delete": ["encryptWhere"],
-      "deleteMany": ["encryptWhere"]
-    },
     error: {
       "*": ["handleError"]
     }
@@ -244,8 +230,7 @@ export const Base: Partial<ServiceSchema<IService>> = {
     createMany: {
       params: {
         $$validator: YupValidator,
-        data: array().of(object()).required(),
-        skipDuplicates: boolean().optional(),
+        data: array().of(object()).required()
       },
       async handler() {
         throw new Error("Not implemented")
@@ -335,86 +320,141 @@ export const Base: Partial<ServiceSchema<IService>> = {
   },
 
   methods: {
-    async breakCache(_ctx: Context, res: unknown) {
-      if (this.broker.cacher) {
-        await this.broker.cacher.clean(`${this.name}.**`)
-      }
+    /**
+    * Creates a Prisma client instance with middleware for handling encrypted fields.
+    *
+    * @param {typeof PrismaClient} prisma - The PrismaClient class to instantiate.
+    * @returns {PrismaClient} - The instantiated Prisma client with middleware applied.
+    *
+    * This function performs the following tasks:
+    * 1. Instantiates a new Prisma client.
+    * 2. Applies middleware to the Prisma client to handle encryption and decryption of specified fields.
+    *
+    * Middleware Logic:
+    * - For `params.args.where`:
+    *   - If `this.settings.encryptedFields` is defined, it encrypts the specified fields.
+    *   - If `this.settings.deterministicEncryptedFields` is defined, it encrypts the specified fields deterministically.
+    * - For `params.args.data`:
+    *   - If `this.settings.encryptedFields` is defined, it encrypts the specified fields.
+    *   - If `this.settings.deterministicEncryptedFields` is defined, it encrypts the specified fields deterministically.
+    * - After the database operation (`next(params)`):
+    *   - If `this.settings.encryptedFields` is defined, it decrypts the specified fields in the result.
+    *   - If `this.settings.deterministicEncryptedFields` is defined, it decrypts the specified fields in the result deterministically.
+    *
+    * @example
+    * const prismaClient = createPrismaClient(PrismaClient);
+    *
+    * @note
+    * - `this.settings.encryptedFields` and `this.settings.deterministicEncryptedFields` should be arrays of field names to be encrypted/decrypted.
+    * - The `encrypt` and `decrypt` functions should handle the actual encryption and decryption logic.
+    **/
+    createPrismaClient(prisma: typeof PrismaClient): PrismaClient {
+      const prismaClient = new prisma();
 
-      return res
-    },
-    async encryptWhere(ctx: Context<{ where: Record<string, string> }>) {
-      const where = ctx.params.where
-      await this.encryptNonDeterministicFields(where)
-      await this.encryptDeterministicFields(where)
-    },
-    async encryptData(ctx: Context<{ data: Record<string, string> }>) {
-      await this.encryptNonDeterministicFields(ctx.params.data)
-      await this.encryptDeterministicFields(ctx.params.data)
-    },
-    async encryptNonDeterministicFields(record: Record<string, string>) {
-      if (this.settings.encryptedFields) {
-        for (const field of this.settings.encryptedFields) {
-          if (record[field]) {
-            record[field] = (await encrypt(Buffer.from(record[field]))).toString()
+      if (this.settings.encryptedFields || this.settings.deterministicEncryptedFields) {
+        prismaClient.$use(async (params: { args: { where?: Record<string, string>, data?: Record<string, string> | Record<string, string>[] }, action: string }, next: Function) => {
+          // Encrypt fields in the 'where' clause
+          if (params.args.where) {
+            if (this.settings.encryptedFields) {
+              for (const field of this.settings.encryptedFields) {
+                if (params.args.where[field]) {
+                  params.args.where[field] = (await encrypt(Buffer.from(params.args.where[field]))).toString();
+                }
+              }
+            }
+
+            if (this.settings.deterministicEncryptedFields) {
+              for (const field of this.settings.deterministicEncryptedFields) {
+                if (params.args.where[field]) {
+                  params.args.where[field] = (await encrypt(Buffer.from(params.args.where[field]), true)).toString();
+                }
+              }
+            }
           }
-        }
-      }
-    },
-    async encryptDeterministicFields(record: Record<string, unknown>) {
-      if (this.settings.deterministicEncryptedFields) {
-        for (const field of this.settings.deterministicEncryptedFields) {
-          if (record[field]) {
-            record[field] = (await encrypt(Buffer.from(record[field] as string), true)).toString()
+
+          // Encrypt fields in the 'data' clause
+          if (params.args.data) {
+            if (this.settings.encryptedFields) {
+              if (Array.isArray(params.args.data)) {
+                for (const record of params.args.data) {
+                  for (const field of this.settings.encryptedFields) {
+                    if (record[field]) {
+                      record[field] = (await encrypt(Buffer.from(record[field]))).toString();
+                    }
+                  }
+                }
+              } else {
+                for (const field of this.settings.encryptedFields) {
+                  if (params.args.data[field]) {
+                    params.args.data[field] = (await encrypt(Buffer.from(params.args.data[field]))).toString();
+                  }
+                }
+              }
+            }
+            if (this.settings.deterministicEncryptedFields) {
+              if (Array.isArray(params.args.data)) {
+                for (const record of params.args.data) {
+                  for (const field of this.settings.deterministicEncryptedFields) {
+                    if (record[field]) {
+                      record[field] = (await encrypt(Buffer.from(record[field]), true)).toString();
+                    }
+                  }
+                }
+              } else {
+                for (const field of this.settings.deterministicEncryptedFields) {
+                  if (params.args.data[field]) {
+                    params.args.data[field] = (await encrypt(Buffer.from(params.args.data[field]), true)).toString();
+                  }
+                }
+              }
+            }
           }
-        }
-      }
-    },
-    async decryptFields(_ctx: Context, res: Record<string, unknown> | Record<string, unknown>[]) {
-      if (!res) return res
 
-      if (res instanceof Array) {
-        const newRes = []
-        for (let record of res) {
-          record = await this.decryptNonDeterministicFields(record)
-          newRes.push(await this.decryptDeterministicFields(record))
+          // Execute the database operation
+          const res = await next(params) as Record<string, string> | Record<string, string>[];
 
-          res = newRes
-        }
-      } else {
-        res = await this.decryptNonDeterministicFields(res)
-        res = await this.decryptDeterministicFields(res)
-      }
-
-      return res
-    },
-    async decryptNonDeterministicFields(record: Record<string, unknown>) {
-      if (this.settings.encryptedFields) {
-        for (const field of this.settings.encryptedFields) {
-          if (record[field]) {
-            record[field] = (await decrypt(Buffer.from(record[field] as string), true)).toString()
+          // Decrypt fields in the result
+          if (this.settings.encryptedFields && res) {
+            if (Array.isArray(res)) {
+              for (const record of res) {
+                for (const field of this.settings.encryptedFields) {
+                  if (record[field]) {
+                    record[field] = (await decrypt(Buffer.from(record[field]))).toString();
+                  }
+                }
+              }
+            } else {
+              for (const field of this.settings.encryptedFields) {
+                if (res[field]) {
+                  res[field] = (await decrypt(Buffer.from(res[field]))).toString();
+                }
+              }
+            }
           }
-        }
-      }
 
-      return record
-    },
-    async decryptDeterministicFields(record: Record<string, unknown>) {
-      if (this.settings.deterministicEncryptedFields) {
-        for (const field of this.settings.deterministicEncryptedFields) {
-          if (record[field]) {
-            record[field] = (await decrypt(Buffer.from(record[field] as string), true)).toString()
+          if (this.settings.deterministicEncryptedFields && res) {
+            if (Array.isArray(res)) {
+              for (const record of res) {
+                for (const field of this.settings.deterministicEncryptedFields) {
+                  if (record[field]) {
+                    record[field] = (await decrypt(Buffer.from(record[field]), true)).toString();
+                  }
+                }
+              }
+            } else {
+              for (const field of this.settings.deterministicEncryptedFields) {
+                if (res[field]) {
+                  res[field] = (await decrypt(Buffer.from(res[field]), true)).toString();
+                }
+              }
+            }
           }
-        }
+
+          return res;
+        });
       }
 
-      return record
-    },
-    async handleError(_ctx: Context, err: Error) {
-      if (err instanceof Errors.MoleculerError) {
-        throw err
-      }
-
-      throw new Errors.MoleculerError(err.message, 500, "INTERNAL_SERVER_ERROR", { error: err })
+      return prismaClient;
     }
   }
 }
