@@ -7,7 +7,7 @@
   "author": "fugufish <fugu@hey.com>",
   "license": "MIT",
   "type": "module",
-  "types": "src/globls.d.ts",
+  "types": "src/index.ts",
   "scripts": {
     "db:migrate:dev": "./bin/stack.cjs db migrate dev --db-service-dir=./src/services/db",
     "db:migrate:test": "yarn db:migrate:dev -e test && ./bin/stack.cjs -e test db migrate dev --db-service-dir=./src/Mixins/DB --atomstack-module=./Base.ts --mixin=Base --service-name-prefix=\"\\$test\"",
@@ -37,7 +37,7 @@
     "moleculer": "^0.15.0-beta1",
     "picocolors": "^1.1.0",
     "plop": "^4.0.1",
-    "prisma": "^5.19.1",
+    "prisma": "^5.20.0",
     "typescript": "^5.6.2",
     "yargs": "^17.7.2",
     "yup": "1.0.0-alpha.3"

@@ -52,7 +52,8 @@ export default {
     await yarnAdd([
       "prisma",
       "yup",
-      "moleculer"
+      "moleculer",
+      "@atomstack/core"
     ])
     await template("tsconfig.json", "tsconfig.json")
     await template("eslint.config.js", "eslint.config.js")

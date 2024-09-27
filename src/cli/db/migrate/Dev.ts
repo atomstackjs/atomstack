@@ -1,10 +1,11 @@
-import {Argv, CommandModule} from "yargs";
+import { Argv, CommandModule } from "yargs";
 import Path from "path";
-import {globSync} from "glob";
-import {spawnSync} from "child_process";
+import { globSync } from "glob";
+import { spawnSync } from "child_process";
 import fs from "fs";
-import {say, setTemplateDir, template} from "../../../generators/actions.ts";
-import {camelCase, kebabCase, snakeCase} from "lodash";
+import { say, setTemplateDir, template } from "../../../generators/actions.ts";
+import { camelCase, kebabCase, snakeCase } from "lodash";
+import { CreateConfiguration } from "../../../Configure.ts";
 
 
 interface Options {
@@ -13,7 +14,8 @@ interface Options {
   "atomstack-module"?: string;
 }
 
-interface MigrateArgs{
+interface MigrateArgs {
+  root: string;
   dbServiceDir: string;
   serviceNamePrefix?: string;
   atomstackModule?: string;
@@ -26,8 +28,7 @@ export const Dev: CommandModule<Options, MigrateArgs> = {
   builder(yargs: Argv) {
     return yargs
       .option("db-service-dir", {
-        description: "The directory where the db services are located",
-        default: Path.join(process.env.ATOMSTACK_ROOT!, "services", "db", "**")
+        description: "The directory where the db services are located"
       })
       .option("service-name-prefix", {
         description: "The prefix to use for the service name",
@@ -43,6 +44,10 @@ export const Dev: CommandModule<Options, MigrateArgs> = {
       process.exit(1);
     }
 
+    await CreateConfiguration(args.root, {})
+
+    args.dbServiceDir ||= Path.resolve(process.env.ATOMSTACK_ROOT!, "services/db");
+
     await say(`Running migrations for all services in ${args.dbServiceDir}`);
 
     const internalSchema = globSync(Path.join(args.dbServiceDir!, "**", "schema.prisma"));
@@ -53,7 +58,7 @@ export const Dev: CommandModule<Options, MigrateArgs> = {
       }
       await say(`Running migrations for ${file}`);
 
-      const result = spawnSync("yarn", ["prisma", "migrate", "dev", "--schema", file], {stdio: "inherit"});
+      const result = spawnSync("yarn", ["prisma", "migrate", "dev", "--schema", file], { stdio: "inherit" });
 
       if (result.status !== 0) {
         console.error("Failed to run migrations", result);

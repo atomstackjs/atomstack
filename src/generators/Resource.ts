@@ -1,12 +1,13 @@
-import {Argv, CommandModule} from "yargs";
-import {createDirectory, say, setTemplateDir, template, yarnRun} from "./actions.ts";
-import {camelCase, capitalize} from "lodash";
+import { Argv, CommandModule } from "yargs";
+import { createDirectory, say, setTemplateDir, template, yarnRun } from "./actions.ts";
+import { camelCase, capitalize } from "lodash";
+import { CreateConfiguration } from "../Configure.ts";
 
 interface ResourceArgs {
+  root: string;
   name: string;
   provider: string;
 }
-
 
 const Resource: CommandModule<ResourceArgs, ResourceArgs> = {
   command: "resource <name>",
@@ -24,6 +25,8 @@ const Resource: CommandModule<ResourceArgs, ResourceArgs> = {
       }) as Argv<ResourceArgs>;
   },
   async handler(args: ResourceArgs) {
+    CreateConfiguration(args.root, {})
+
     await setTemplateDir("resource");
 
     await say(`Generating resource ${args.name}`);

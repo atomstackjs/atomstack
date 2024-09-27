@@ -4,6 +4,7 @@ import { BrokerOptions, Errors, LogLevels, ServiceBroker, TransporterConfig } fr
 import { EncryptionMiddleware } from "./Middlewares/EncryptionMiddleware.ts";
 import { OmniValidator } from "./ServiceValidators/OmniValidator.ts";
 import AtomstackMiddleware from "./Middlewares/AtomstackMiddleware.ts";
+import Path from "path";
 
 const DEFAULTS: BrokerOptions = {
   logLevel: process.env.ATOMSTACK_LOG_LEVEL as LogLevels || "debug",
@@ -55,6 +56,7 @@ export function Configure(config: BrokerOptions): BrokerOptions {
 
 export async function CreateConfiguration(root: string, options: Partial<BrokerOptions>) {
   process.env.ATOMSTACK_ROOT = root
+  process.env.ATOMSTACK_SRC = Path.resolve(__dirname)
   const config = (await import(`${process.env.ATOMSTACK_ROOT}/config/stack.config.ts`)).default
 
   return Configure(

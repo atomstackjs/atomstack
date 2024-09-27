@@ -1,7 +1,7 @@
 import pc from "picocolors"
 import Path from "path"
 import fs from "fs"
-import { execSync, spawnSync } from "child_process"
+import { spawnSync } from "child_process"
 
 const COLORS = {
   error: (message: string) => pc.bold(pc.red(message)),

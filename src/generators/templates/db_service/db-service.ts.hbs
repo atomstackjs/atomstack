@@ -19,6 +19,11 @@ const {{name}}ServiceSchema: ServiceSchema<T{{name}}Service> = {
   },
 
   actions: {
+    count: {
+      async handler(ctx: Context<Prisma.{{name}}CountArgs>) {
+        return this.prisma.{{camelCaseName}}.count(ctx.params)
+      }
+    },
     findUnique: {
       async handler(ctx: Context<{{name}}FindUniqueArgs>) {
         return this.prisma.{{camelCaseName}}.findUnique(ctx.params)

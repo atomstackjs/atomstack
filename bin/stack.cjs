@@ -4,9 +4,7 @@
  * This must be a `cjs` file as SWC register isn't designed to be loaded as a module.
 */
 const yargs = require("yargs")
-const Path = require("path")
 const { hideBin } = require("yargs/helpers")
-const { ServiceBroker } = require("moleculer")
 const { register } = require("@swc-node/register/register")
 
 register(() => { })
@@ -14,6 +12,7 @@ register(() => { })
 const { DB } = require("../src/cli/DB.ts")
 const { Generate } = require("../src/cli/Generate.ts")
 const { Start } = require("../src/cli/Start.ts")
+const { Console } = require("../src/cli/Console.ts")
 
 
 yargs(hideBin(process.argv))
@@ -35,19 +34,7 @@ yargs(hideBin(process.argv))
   })
   .command(Generate)
   .command(Start)
-  .command({
-    command: "console",
-    aliases: "c",
-    describe: "Start the Moleculer REPL console",
-    handler: () => {
-      const config = require(Path.join(process.env.ATOMSTACK_ROOT, "config", "stack.config.ts")).default
-      config.log_level = "debug"
-      config.metadata = { ...config.metadata || {}, repl: true }
-      const broker = new ServiceBroker(config)
-      broker.start()
-      broker.repl()
-    }
-  })
+  .command(Console)
   .command(DB)
   .demandCommand()
   .help()
