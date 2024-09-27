@@ -11,7 +11,7 @@ const {{name}}ServiceSchema: ServiceSchema<T{{name}}Service> = {
   mixins: [Mixins.DB.Base],
 
   async started() {
-    this.prisma = new PrismaClient()
+    this.prisma = this.createPrismaClient(PrismaClient)
   },
 
   stopped() {

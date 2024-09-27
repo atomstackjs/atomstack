@@ -1,9 +1,13 @@
-import { Context, Errors, ServiceSchema } from "moleculer";
-import { array, boolean, number, object, string } from "yup";
+import { ServiceSchema } from "moleculer";
+import { array, number, object, string } from "yup";
 import { YupValidator } from "../../ServiceValidators/index.ts";
+import bcrypt from "bcrypt";
 import { IService } from "./IService.ts";
 import { PrismaClient } from "@prisma/client";
 import { decrypt, encrypt } from "../../util/encryption.ts";
+
+
+export const BCRYPT_SALT_ROUNDS = 10
 
 /**
  * BaseDBMixin
@@ -43,7 +47,18 @@ import { decrypt, encrypt } from "../../util/encryption.ts";
  * module.exports = LocatorService;
  *
  * ## Settings
-  *
+ * | Property                       | Type          | Default | Description                                        |
+ * |--------------------------------|---------------|---------|----------------------------------------------------|
+ * | `encryptedFields`              | `string[]`    | `[]`    | Fields to encrypt using non deterministic          | 
+ * |                                |               |         | encryption, meaning that the same plaintext will be|
+ * |                                |               |         | encrypted to different ciphertexts.                |
+ * | `deterministicEncryptedFields` | `string[]`    | `[]`    | Fields to encrypt using deterministic encryption,  |
+ * |                                |               |         | meaning that the same plaintext will be encrypted  |
+ * |                                |               |         | to the same ciphertext. This is less secure than   |
+ * |                                |               |         | non-deterministic encryption, but allows for the   |
+ * |                                |               |         | encrypted field to be queried and indexed.         |
+ * | `hashedFields`                 | `string[]`    | `[]`    | Fields to hash using bcrypt.                      |
+ *
  * ## Actions
  * | Action            | Description                 | Params                                                   |
  * |-------------------|-----------------------------|----------------------------------------------------------|
@@ -451,6 +466,32 @@ export const Base: Partial<ServiceSchema<IService>> = {
           }
 
           return res;
+        });
+      }
+
+
+      if (this.settings.hashedFields) {
+        // Middleware for hashing fields using bcrypt.
+        prismaClient.$use(async (params: { args: { data?: Record<string, string> | Record<string, string>[] } }, next: Function) => {
+          if (params.args.data) {
+            if (Array.isArray(params.args.data)) {
+              for (const record of params.args.data) {
+                for (const field of this.settings.hashedFields!) {
+                  if (record[field]) {
+                    record[field] = await bcrypt.hash(record[field], BCRYPT_SALT_ROUNDS);
+                  }
+                }
+              }
+            } else {
+              for (const field of this.settings.hashedFields!) {
+                if (params.args.data[field]) {
+                  params.args.data[field] = await bcrypt.hash(params.args.data[field], BCRYPT_SALT_ROUNDS);
+                }
+              }
+            }
+          }
+
+          return next(params)
         });
       }
 

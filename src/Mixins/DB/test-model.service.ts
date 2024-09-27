@@ -11,7 +11,8 @@ const TestModelServiceSchema: ServiceSchema<TTestModelService> = {
 
   settings: {
     encryptedFields: ["encryptedText"],
-    deterministicEncryptedFields: ["deterministicEncryptedText"]
+    deterministicEncryptedFields: ["deterministicEncryptedText"],
+    hashedFields: ["hashedText"]
   },
 
   mixins: [Base],
