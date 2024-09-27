@@ -20,6 +20,7 @@ __metadata:
   resolution: "@atomstack/core@workspace:."
   dependencies:
     "@eslint/js": "npm:^9.10.0"
+    "@faker-js/faker": "npm:^9.0.3"
     "@jest/globals": "npm:^29.7.0"
     "@moleculer/channels": "npm:^0.1.8"
     "@prisma/client": "npm:5.19.1"
@@ -536,6 +537,13 @@ __metadata:
   dependencies:
     levn: "npm:^0.4.1"
   checksum: 10c0/fae97cd4efc1c32501c286abba1b5409848ce8c989e1ca6a5bb057a304a2cd721e6e957f6bc35ce95cfd0871e822ed42df3c759fecdad72c30e70802e26f83c7
+  languageName: node
+  linkType: hard
+
+"@faker-js/faker@npm:^9.0.3":
+  version: 9.0.3
+  resolution: "@faker-js/faker@npm:9.0.3"
+  checksum: 10c0/fde52946e7042e6273cf2ea3726a8a4b794c5b0fa8ac22cb9edcc5c436aec1b07fcb925e13abd663e86cd35d0286be0c65639d429b21bcd458205edaaa6394d0
   languageName: node
   linkType: hard
 

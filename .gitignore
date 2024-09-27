@@ -7,4 +7,3 @@ wiki/
 src/Mixins/DB/prisma/_client_/
 src/Mixins/DB/prisma/migrations/
 src/Mixins/DB/prisma/db.sqlite*
-src/Mixins/DB/test-model.service.ts

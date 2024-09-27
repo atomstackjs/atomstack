@@ -81,8 +81,6 @@ export const Dev: CommandModule<Options, MigrateArgs> = {
         const kebabCaseName = kebabCase(model);
         const camelCaseName = camelCase(model);
 
-        console.log(file)
-
         if (!fs.existsSync(Path.resolve(file, "../../", `${kebabCaseName}.service.ts`))) {
           await say(`Generating service for ${model}`);
           await template("db-service.ts", Path.resolve(file, "../../", `${kebabCaseName}.service.ts`), {

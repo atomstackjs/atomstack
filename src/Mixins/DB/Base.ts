@@ -116,9 +116,8 @@ export const Base: Partial<ServiceSchema<IService>> = {
     before: {
       "create": ["encryptData"],
       "update": ["encryptData", "encryptWhere"],
-      "findUnique": ["encryptWhere"],
-      "findFirst": ["encryptWhere"],
-      "findMany": ["encryptWhere"],
+      "find*": ["encryptWhere"],
+      "count": ["encryptWhere"],
       "delete": ["encryptWhere"],
       "deleteMany": ["encryptWhere"]
     },

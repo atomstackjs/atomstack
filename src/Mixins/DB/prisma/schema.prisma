@@ -9,8 +9,11 @@ generator client {
 }
 
 model TestModel {
-  id                         String  @id @default(cuid())
-  plainText                  String?
-  encryptedText              String?
-  deterministicEncryptedText String?
+  id                                   String  @id @default(cuid())
+  plainText                            String?
+  encryptedText                        String?
+  deterministicEncryptedText           String? @unique
+  nonUniqueDeterministicEncryptedField String?
+
+  @@index([nonUniqueDeterministicEncryptedField])
 }
