@@ -1,9 +1,8 @@
-import {ServiceBroker, ServiceSchema} from "moleculer";
-import {afterAll, beforeAll, beforeEach, describe, expect, it, jest} from "@jest/globals";
+import { ServiceBroker, ServiceSchema } from "moleculer";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { SetupSpec } from "../../util/SetupSpec.ts";
-import {Prisma, PrismaClient, TestModel} from "./prisma/client/index.js";
-import TestModelServiceSchema from "./test-model.service.ts";
-import {TTestModelService} from "./test-model.service.js";
+import { Prisma, PrismaClient, TestModel } from "./prisma/_client_/index.js";
+import TestModelServiceSchema, { TTestModelService } from "./test-model.service.ts";
 
 describe("DB.Base", () => {
   describe("Integration tests", () => {
@@ -33,10 +32,23 @@ describe("DB.Base", () => {
           "$test.db.test-model.create",
           { data: { plainText: "test" } }
         )
-        expect(res).toEqual(expect.objectContaining({id: expect.stringMatching(/^c/), plainText: "test" }))
+        expect(res).toEqual(expect.objectContaining({ id: expect.stringMatching(/^c/), plainText: "test" }))
       })
     })
 
+    describe("encryption", () => {
+      it("should encrypt fields listed as encrypted", async () => {
+        const res = await broker.call<TestModel, Prisma.TestModelCreateArgs>(
+          "$test.db.test-model.create",
+          { data: { plainText: "test", encryptedText: "test" } }
+        )
+
+        const record = await prisma.testModel.findUnique({ where: { id: res.id } })
+
+
+        expect(record?.encryptedText).not.toEqual("test")
+      })
+    })
   });
 })
 

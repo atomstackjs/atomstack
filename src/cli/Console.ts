@@ -6,6 +6,9 @@ export const Console = {
   describe: "Start the Moleculer REPL console",
   handler: async (args: { root: string }) => {
     await StartGlobalBroker(args.root, {
+      metadata: {
+        repl: true
+      },
       logger: false
     })
 

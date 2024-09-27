@@ -1,8 +1,8 @@
-import {Context, Errors, ServiceSchema} from "moleculer";
-import {array, boolean, number, object, string} from "yup";
-import {YupValidator} from "../../ServiceValidators/index.ts";
-import {decrypt, encrypt} from "../../util/encryption.ts";
-import {IService} from "./IService.ts";
+import { Context, Errors, ServiceSchema } from "moleculer";
+import { array, boolean, number, object, string } from "yup";
+import { YupValidator } from "../../ServiceValidators/index.ts";
+import { decrypt, encrypt } from "../../util/encryption.ts";
+import { IService } from "./IService.ts";
 
 /**
  * BaseDBMixin
@@ -415,7 +415,7 @@ export const Base: Partial<ServiceSchema<IService>> = {
         throw err
       }
 
-      throw new Errors.MoleculerError(err.message, 500, "INTERNAL_SERVER_ERROR", {error: err})
+      throw new Errors.MoleculerError(err.message, 500, "INTERNAL_SERVER_ERROR", { error: err })
     }
   }
 }
