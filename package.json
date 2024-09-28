@@ -10,7 +10,7 @@
   "types": "src/index.ts",
   "scripts": {
     "db:migrate:dev": "./bin/stack.cjs db migrate dev --db-service-dir=./src/services/db",
-    "db:migrate:test": "yarn db:migrate:dev -e test && ./bin/stack.cjs -e test db migrate dev --db-service-dir=./src/Mixins/DB --atomstack-module=./Base.ts --mixin=Base --service-name-prefix=\"\\$test\"",
+    "db:migrate:test": "yarn db:migrate:dev -e test && ./bin/stack.cjs -e test db migrate dev --db-service-dir=./src/Mixins/DB --atomstack-module=./Base.ts --mixin=Base",
     "test": "jest"
   },
   "bin": {

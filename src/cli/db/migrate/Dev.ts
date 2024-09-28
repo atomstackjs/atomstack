@@ -19,6 +19,7 @@ interface MigrateArgs {
   dbServiceDir: string;
   serviceNamePrefix?: string;
   atomstackModule?: string;
+  mixin?: string;
 }
 
 export const Dev: CommandModule<Options, MigrateArgs> = {
@@ -30,12 +31,13 @@ export const Dev: CommandModule<Options, MigrateArgs> = {
       .option("db-service-dir", {
         description: "The directory where the db services are located"
       })
-      .option("service-name-prefix", {
-        description: "The prefix to use for the service name",
-      })
       .options("atomstack-module", {
         description: "The directory where the Atomstack library is located",
         default: "@atomstack/core"
+      })
+      .option("mixin", {
+        description: "The mixin to use for the service",
+        default: "Mixins.DB.Base"
       }) as unknown as Argv<MigrateArgs>;
   },
   handler: async (args: MigrateArgs) => {
@@ -51,14 +53,22 @@ export const Dev: CommandModule<Options, MigrateArgs> = {
     await say(`Running migrations for all services in ${args.dbServiceDir}`);
 
     const internalSchema = globSync(Path.join(args.dbServiceDir!, "**", "schema.prisma"));
+    const baseName = process.env.DATABASE_URL
 
     for (const file of internalSchema) {
       if (file.includes("/_client_/")) {
         continue;
       }
-      await say(`Running migrations for ${file}`);
+
+      process.env.DATABASE_URL = baseName + "_" + Path.basename(Path.resolve(Path.dirname(file), ".."))
+
+      const url = new URL(process.env.DATABASE_URL);
+      await say(`Running migrations for ${file} on ${url.host}${url.pathname}`);
+
 
       const result = spawnSync("yarn", ["prisma", "migrate", "dev", "--schema", file], { stdio: "inherit" });
+
+      process.env.DATABASE_URL = baseName;
 
       if (result.status !== 0) {
         console.error("Failed to run migrations", result);
@@ -80,6 +90,7 @@ export const Dev: CommandModule<Options, MigrateArgs> = {
         const snakeCaseName = snakeCase(model);
         const kebabCaseName = kebabCase(model);
         const camelCaseName = camelCase(model);
+        const capitalized = camelCaseName.charAt(0).toUpperCase() + camelCaseName.slice(1);
 
         if (!fs.existsSync(Path.resolve(file, "../../", `${kebabCaseName}.service.ts`))) {
           await say(`Generating service for ${model}`);
@@ -89,7 +100,8 @@ export const Dev: CommandModule<Options, MigrateArgs> = {
             kebabCaseName,
             camelCaseName,
             atomstackModule: args.atomstackModule!,
-            name: model
+            name: model,
+            mixin: args.mixin!
           });
         }
       }

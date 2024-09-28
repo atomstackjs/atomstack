@@ -2,10 +2,10 @@ import { Mixins } from "{{atomstackModule}}";
 import { ServiceSchema } from "moleculer";
 import { Prisma, PrismaClient } from "./prisma/_client_/index.js";
 
-export type T{{name}}Service = Mixins.DB.IService<PrismaClient, Prisma.{{Name}}Delegate>
+export type T{{name}}Service = Mixins.DB.IService<PrismaClient, Prisma.{{name}}Delegate>
 
-const {{name}}ServiceSchema: ServiceSchema<T{{name}}Service> = {
-  mixins: [Mixins.DB.Base<T{{name}}Service>(PrismaClient, "{{name}}")],
+const {{name}}ServiceSchema: Partial<ServiceSchema<T{{name}}Service>> = {
+  mixins: [{{mixin}}<T{{name}}Service>(PrismaClient, "{{snakeCaseName}}")],
 };
 
 export default {{name}}ServiceSchema;
