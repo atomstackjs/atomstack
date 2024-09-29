@@ -7,6 +7,7 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import { decrypt, encrypt } from "../../util/encryption.ts";
 import { kebabCase } from "lodash";
 import { ISettings } from "./ISettings.ts";
+import { PrismaClientOptions } from "@prisma/client/runtime/library";
 
 
 export const BCRYPT_SALT_ROUNDS = 10
@@ -122,14 +123,25 @@ export const BCRYPT_SALT_ROUNDS = 10
  * **Note**: Avoid deterministic encryption for highly sensitive data that does
  * not need querying, as it offers lower security than standard encryption.
  */
-export function Base<TPrismaClient>(client: new () => TPrismaClient): (modelName: keyof TPrismaClient) => ServiceSchema<IGenericModelService<TPrismaClient>> {
+export function Base<TPrismaClient>(client: new (options: any) => TPrismaClient, databaseName: string): (modelName: keyof TPrismaClient) => ServiceSchema<IGenericModelService<TPrismaClient>> {
 
-  const prisma = new client()
+  const prisma = new client({
+    datasources: {
+      db: {
+        url: `${process.env.DATABASE_URL}_${databaseName}`
+      },
+    },
+  })
 
   return function <TService extends IGenericModelService<TPrismaClient>>(modelName: keyof TPrismaClient): ServiceSchema<TService> {
     return {
       name: `db.${kebabCase(modelName as string)}`,
       hooks: {
+        after: {
+          "delete*": [
+            "notifyDeleted"
+          ]
+        },
         error: {
           "*": ["handleError"]
         }
@@ -358,6 +370,17 @@ export function Base<TPrismaClient>(client: new () => TPrismaClient): (modelName
       },
 
       methods: {
+        async notifyDeleted(ctx: any, res: unknown | unknown[]) {
+          if (Array.isArray(res)) {
+            for (const record of res) {
+              await this.notifyDeleted(ctx, record)
+            }
+          } else {
+            await ctx.broker.sendToChannel(`db.${kebabCase(modelName as string)}.deleted`, res)
+          }
+
+          return res
+        },
         /**
         * Creates a Prisma client instance with middleware for handling encrypted fields.
         *

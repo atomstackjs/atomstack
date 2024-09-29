@@ -1,0 +1,4 @@
+import { Mixins } from "@atomstack/core";
+import { PrismaClient } from "./prisma/_client_/index.js";
+
+export const PrismaMixin = {{mixin}}<PrismaClient>(PrismaClient)

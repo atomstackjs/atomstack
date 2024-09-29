@@ -68,6 +68,14 @@ export const Dev: CommandModule<Options, MigrateArgs> = {
 
       const result = spawnSync("yarn", ["prisma", "migrate", "dev", "--schema", file], { stdio: "inherit" });
 
+      await setTemplateDir(Path.resolve(process.env.ATOMSTACK_SRC!, "generators/templates/db_service"));
+
+      if (!fs.existsSync(Path.resolve(file, "../../", "prisma.mixin,ts"))) {
+        template("prisma.mixin.ts", Path.resolve(file, "../../", "prisma.mixin.ts"), {
+          mixin: args.mixin!
+        })
+      }
+
       process.env.DATABASE_URL = baseName;
 
       if (result.status !== 0) {
@@ -77,7 +85,6 @@ export const Dev: CommandModule<Options, MigrateArgs> = {
 
       const content = fs.readFileSync(file, "utf-8");
       const models = content.match(/model (\w+) {/g)?.map((m) => m.replace("model ", "").replace(" {", "")) || [];
-      await setTemplateDir(Path.resolve(process.env.ATOMSTACK_SRC!, "generators/templates/db_service"));
 
       for (const model of models) {
 
@@ -90,7 +97,6 @@ export const Dev: CommandModule<Options, MigrateArgs> = {
         const snakeCaseName = snakeCase(model);
         const kebabCaseName = kebabCase(model);
         const camelCaseName = camelCase(model);
-        const capitalized = camelCaseName.charAt(0).toUpperCase() + camelCaseName.slice(1);
 
         if (!fs.existsSync(Path.resolve(file, "../../", `${kebabCaseName}.service.ts`))) {
           await say(`Generating service for ${model}`);
@@ -101,7 +107,6 @@ export const Dev: CommandModule<Options, MigrateArgs> = {
             camelCaseName,
             atomstackModule: args.atomstackModule!,
             name: model,
-            mixin: args.mixin!
           });
         }
       }

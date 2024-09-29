@@ -6,9 +6,11 @@ import { OmniValidator } from "./ServiceValidators/OmniValidator.ts";
 import AtomstackMiddleware from "./Middlewares/AtomstackMiddleware.ts";
 import Path from "path";
 
+export const BASE_TENANT_ID = "c000000000000000000000000"
+
 const DEFAULTS: BrokerOptions = {
   logLevel: process.env.ATOMSTACK_LOG_LEVEL as LogLevels || "debug",
-  namespace: process.env.NODE_ENV || "development",
+  namespace: process.env.TENANT_ID || BASE_TENANT_ID,
   retryPolicy: {
     enabled: true,
     retries: 10,
@@ -67,9 +69,9 @@ export async function CreateConfiguration(root: string, options: Partial<BrokerO
 
 export async function CreateBroker(root: string, options: Partial<BrokerOptions>) {
   process.env.ATOMSTACK_ROOT = root
-  const config = (await import(`${process.env.ATOMSTACK_ROOT}/config/stack.config.ts`)).default
-
-  return new ServiceBroker(await CreateConfiguration(root, options))
+  const broker = new ServiceBroker(await CreateConfiguration(root, options))
+  broker.tenantId = broker.namespace
+  return broker
 }
 
 export async function StartBroker(root: string, options: Partial<BrokerOptions>) {
